@@ -3,12 +3,47 @@
   <head>
     <meta charset="utf-8">
     <title> Effyshell by Effyiex </title>
+    <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet">
     <script src="pyjsps.js" type="text/javascript"> </script>
+    <script src="client.js" type="text/javascript"> </script>
+    <link rel="stylesheet" href="style.css">
   </head>
-  <body>
-    <script>
-      var client = new PySocket("127.0.0.1", 8923);
-      client.send(new PyPacket("Hello WOrld"));
-    </script>
+  <body bgcolor="#2c2c37">
+    <div class="title-bar">
+      <div class="title-icon">
+        <img src="assets/icon.png"> </img>
+      </div>
+      <div class="welcome-msg"> Welcome! </div>
+      <div class="tab-controls">
+        <ul>
+          <li> <div class="process-add">
+            <a title="Add another process">
+              <img src="assets/plus_icon.png">
+            </a> </div>
+          </li>
+          <li> <div class="process-pause">
+            <a title="Pause current process">
+              <img src="assets/ball_icon.png">
+            </a> </div>
+          </li>
+          <li> <div class="process-remove">
+            <a title="Remove process">
+              <img src="assets/minus_icon.png">
+            </a> </div>
+          </li>
+          <li> <div class="scroll-to-end">
+            <a title="Scroll to the End-of-Output">
+              <img src="assets/triangle_icon.png">
+            </a> </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="console-log">
+
+    </div>
+    <div class="input-bar">
+      <input placeholder="Execute Command here."> </input>
+    </div>
   </body>
 </html>
