@@ -32,7 +32,7 @@ class Process:
         mapped = self.launcher.replace('\\', '/').split('/')
         dir = str()
         for i in range(len(mapped) - 1): dir += mapped[i] + '/'
-        self.inner = Popen([self.launcher], stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=dir)
+        self.inner = Popen([self.launcher], shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=dir)
         while self.inner != None:
             for line in self.inner.stdout:
                 if not line: break
