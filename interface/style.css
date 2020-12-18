@@ -1,50 +1,112 @@
 
 @keyframes WelcomeMsg {
   0% {
-    transform: translateX(0%) translateX(-52px);
+    transform: translateX(0%);
     opacity: 0;
   }
   25% {
-    transform: translateX(-100%) translateX(-52px);
+    transform: translateX(-100%) translateX(-24px);
     opacity: 1.0;
   }
   75% {
-    transform: translateX(-100%) translateX(-52px);
+    transform: translateX(-100%) translateX(-24px);
     opacity: 1.0;
   }
   100% {
-    transform: translateX(0%) translateX(-52px);
+    transform: translateX(0%);
     opacity: 0;
   }
+}
+
+.logging-tabs p {
+  text-transform: capitalize;
+  color: #FFFFFF;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.logging-tabs box {
+  position: absolute;
+  height: 2px;
+  width: 200px;
+  transform: translate(-50%, -25px);
+}
+
+.logging-tabs li {
+  float: left;
+  margin: 0 4px;
+  background-color: #404050;
+  min-width: 200px;
+  top: 20px;
+  height: 28px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 3px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.logging-tabs ul {
+  position: absolute;
+  left: 148px;
+}
+
+.console-log {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.console-log textarea {
+  background-color: inherit;
+  resize: none;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  border: 0;
+  outline-color: 0;
+  cursor: default;
+  color: #FFFFFF;
+  font-family: Nunito;
 }
 
 .welcome-msg {
   position: absolute;
-  font-family: Nunito;
   animation: WelcomeMsg;
-  animation-duration: 3s;
+  animation-duration: 5s;
   color: #FFAA00;
   font-size: 32px;
-  top: 4px;
+  top: 64px;
   left: 100%;
-  transform: translateX(-100%) translateX(-52px);
   opacity: 0;
+  white-space: nowrap;
+}
+
+body {
+  overflow: hidden;
+  font-family: Nunito;
 }
 
 .tab-controls img {
-  width: 48px;
-  height: 48px;
-  transform: scale(0.75);
+  width: 36px;
+  height: 36px;
+}
+
+.tab-controls li img:hover {
+  transform: scale(0.9);
 }
 
 .tab-controls li {
-  padding: 0 1px;
+  margin: 0 4px;
   float: left;
   cursor: pointer;
-  transform: translate(-75%, -32%);
+  transform: translate(-95%, -25%);
 }
 
-.tab-controls ul {
+ul {
   list-style: none;
 }
 
