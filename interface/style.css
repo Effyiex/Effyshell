@@ -55,9 +55,8 @@
   position: absolute;
   top: 48px;
   left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+  width: calc(100% - 32px);
+  height: calc(100% - 128px);
 }
 
 .console-log textarea {
@@ -71,6 +70,7 @@
   cursor: default;
   color: #FFFFFF;
   font-family: Nunito;
+  overflow: auto;
 }
 
 .welcome-msg {

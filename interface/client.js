@@ -31,9 +31,9 @@ class Process {
         while(mapped.length < 2) mapped.push(' ');
         new Process(mapped[mapped.length - 2], args[1] == "True");
       }
-      var active = Process.active();
       var suffix = '!';
-      if(active) suffix = " back, active: " + (Process.active() / PROCESSES.length * 100) + '%';
+      if(PROCESSES.length > 0)
+        suffix = " back, active: " + (Process.active() / PROCESSES.length * 100) + '%';
       document.getElementsByClassName("welcome-msg")[0].innerHTML = "Welcome" + suffix;
     });
   }
@@ -58,7 +58,6 @@ class Process {
     PROCESSES.splice(Process.index, 1);
     if(Process.index > 0) Process.index--;
     else if(PROCESSES.length > 1) Process.index = PROCESSES.length - 1;
-
   }
 
   static pause = function() {
@@ -75,8 +74,16 @@ class Process {
     CLIENT.send(new PyPacket("FETCH_LOG", [Process.index]), function(packet) {
       var log = packet.label.replaceAll("\\LINE_BREAK\\", '\n');
       if(!inst.active) log = "Process closed.";
-      Process.area.innerHTML = ADVERT + log;
+      log = ADVERT + log;
+      if(Process.area.innerHTML != log)
+      Process.area.innerHTML = log;
     });
+  }
+
+  static input = function(command) {
+    console.log("Processing Command: " + command);
+    if(command.toLowerCase() == "#clear") CLIENT.send(new PyPacket("CLEAR_LOG", [Process.index]));
+    else CLIENT.send(new PyPacket("STREAM_PROCESS", [Process.index, command]));
   }
 
   constructor(label, active) {
@@ -123,6 +130,13 @@ window.onload = function() {
   document.getElementsByClassName("process-pause")[0].onclick = Process.pause;
   document.getElementsByClassName("process-remove")[0].onclick = Process.remove;
   document.getElementsByClassName("title-icon")[0].onclick = help;
+  var input = document.getElementsByClassName("input-bar")[0].children[0];
+  input.onkeydown = e => {
+    if(e.keyCode != 13) return; // '13' = Enter-Key
+    if(input.value.length <= 0) return;
+    Process.input(input.value);
+    input.value = String();
+  }
   Process.fetch();
   setInterval(Process.logger, 256);
 }

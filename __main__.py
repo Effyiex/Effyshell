@@ -2,9 +2,11 @@
 from pyjsps import *
 from threading import Thread
 from socket import *
-from os import getcwd as cwd
+from os import path as filedir
 from os import _exit
 from subprocess import Popen, PIPE
+
+def cwd(): return filedir.dirname(filedir.abspath(__file__))
 
 BACKEND_PORT = 8923
 FRONTEND_PORT = 8924
@@ -16,21 +18,31 @@ class Process:
         self.alive = alive
         self.log = str()
         self.inner = None
+        self.thread = None
         if alive: self.launch()
 
     def add_to_log(self, line): self.log += f"\n{line}".replace('\n', "\\LINE_BREAK\\")
     def parse(self): return f"{self.launcher}*~{str(self.alive)}"
 
     def launch(self):
+        self.thread = Thread(target=self.layer)
+        self.thread.start()
+
+    def layer(self):
         mapped = self.launcher.replace('\\', '/').split('/')
         dir = str()
         for i in range(len(mapped) - 1): dir += mapped[i] + '/'
-        self.inner = Popen([self.launcher], stdout=PIPE, cwd=dir)
+        self.inner = Popen([self.launcher], stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=dir)
+        while self.inner != None:
+            for line in self.inner.stdout:
+                if not line: break
+                data = line.decode("utf-8").rstrip('\n')
+                if len(data) > 0: self.add_to_log(data)
 
-    def update(self):
-        if self.inner != None:
-            data = self.inner.stdout.read().decode("utf-8")
-            if len(data) > 0: self.add_to_log(data)
+    def send(self, command):
+        self.inner.stdin.write((command + '\n').encode())
+        self.inner.stdin.flush()
+        self.add_to_log(f" > Effyshell-Input: {command}")
 
     def toggle(self):
         self.alive = not self.alive
@@ -47,7 +59,7 @@ class BackEnd:
 
     def receiver(self, packet):
         packet.label = packet.label.upper()
-        if not packet.label.startswith("FETCH_LOG"): # Stopping Overflow
+        if not packet.label.startswith("FETCH"): # Stopping Overflow
             print("BackEnd-Request : " + packet.label)
         if packet.label == "TOGGLE_PROCESS":
             process = registry.get(int(packet.args[0]))
@@ -57,12 +69,20 @@ class BackEnd:
             for process in registry.req: args.append(process.parse())
             return JsPacket(str(registry.count()), args)
         elif packet.label == "ADD_PROCESS": registry.append(Process(packet.args[0]))
-        elif packet.label == "REMOVE_PROCESS": registry.remove(int(packet.args[0]))
+        elif packet.label == "REMOVE_PROCESS":
+            index = int(packet.args[0])
+            process = registry.get(index)
+            if process.alive: process.toggle()
+            registry.remove(index)
         elif packet.label == "FETCH_LOG":
             process = registry.get(int(packet.args[0]))
-            if process != None:
-                process.update()
-                return JsPacket(process.log)
+            if process != None: return JsPacket(process.log)
+        elif packet.label == "STREAM_PROCESS":
+            process = registry.get(int(packet.args[0]))
+            if process != None: process.send(packet.args[1])
+        elif packet.label == "CLEAR_LOG":
+            process = registry.get(int(packet.args[0]))
+            if process != None: process.log = str()
         return JsPacket("404 Standard-Feedback.")
 
     def launch(self):
