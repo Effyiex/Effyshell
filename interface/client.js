@@ -38,20 +38,17 @@ class Process {
     });
   }
 
-  static add = function() {
-    var path = prompt("Path to Launch-Script: ").replaceAll('\\', '/');
-    if(path) {
-      CLIENT.send(new PyPacket("ADD_PROCESS", [path]));
-      var mapped = path.split('/');
-      mapped = mapped[mapped.length - 1].split('.');
-      while(mapped.length < 2) mapped.push(' ');
-      new Process(mapped[mapped.length - 2], false);
-      Process.index = PROCESSES.length - 1;
-    }
+  static add = function(path) {
+    path = path.replaceAll('\\', '/');
+    CLIENT.send(new PyPacket("ADD_PROCESS", [path]));
+    var mapped = path.split('/');
+    mapped = mapped[mapped.length - 1].split('.');
+    while(mapped.length < 2) mapped.push(' ');
+    new Process(mapped[mapped.length - 2], false);
+    Process.index = PROCESSES.length - 1;
   }
 
   static remove = function() {
-    if(!confirm("Do u really wanna remove this process?")) return;
     if(!PROCESSES[Process.index]) return;
     CLIENT.send(new PyPacket("REMOVE_PROCESS", [Process.index]));
     Process.tabs.removeChild(PROCESSES[Process.index].tab);
@@ -70,7 +67,7 @@ class Process {
 
   static logger = function() {
     var inst = PROCESSES[Process.index];
-    if(!inst || !Process.area) return;
+    if(!inst || !Process.area || quitted) return;
     CLIENT.send(new PyPacket("FETCH_LOG", [Process.index]), function(packet) {
       var log = packet.label.replaceAll("\\LINE_BREAK\\", '\n');
       if(!inst.active) log = "Process closed.";
@@ -83,7 +80,17 @@ class Process {
   static input = function(command) {
     console.log("Processing Command: " + command);
     if(command.toLowerCase() == "#clear") CLIENT.send(new PyPacket("CLEAR_LOG", [Process.index]));
+    else if(command.toLowerCase() == "#quit") {
+      CLIENT.send(new PyPacket("QUIT"));
+      quitted = true;
+      document.getElementsByClassName("quitted")[0].style.display = "block";
+    } else if(command.toLowerCase().startsWith("#add")) {
+      if(command.trim().length > 4 && command != "#add <path>") Process.add(command.substring(5));
+      else return "#add <path>";
+    } else if(command.toLowerCase() == "#toggle") Process.pause();
+    else if(command.toLowerCase() == "#remove") Process.remove();
     else CLIENT.send(new PyPacket("STREAM_PROCESS", [Process.index, command]));
+    return String();
   }
 
   constructor(label, active) {
@@ -116,26 +123,44 @@ class Process {
 
 }
 
-function help() {
-  alert("Use '#' for Effyshell-Commands:"
-  + "\n - 'clear' > clears the log."
-  + "\n - 'toggle' > toggles the Process-State.");
+function menu() {
+  var div = document.getElementsByClassName("menu")[0];
+  if(Number(div.style.opacity) <= 0) {
+    div.style.opacity = "1";
+    div.style.transform = "translateX(-100%)";
+    div.style.animation = "MenuFadeIn 1s normal";
+  } else {
+    div.style.animation = "MenuFadeOut 1s normal";
+    div.style.opacity = "0";
+    div.style.transform = "translateX(0)";
+  }
 }
+
+function exit() {
+  input.value = "#quit";
+}
+
+function clearlog() {
+  input.value = "#clear";
+}
+
+var input;
+
+var quitted = false;
 
 window.onload = function() {
   CLIENT.debug = false;
+  input = document.getElementsByClassName("input-bar")[0].children[0];
   Process.area = document.getElementsByClassName("console-log")[0].children[0];
   Process.tabs = document.getElementsByClassName("logging-tabs")[0].children[0];
-  document.getElementsByClassName("process-add")[0].onclick = Process.add;
-  document.getElementsByClassName("process-pause")[0].onclick = Process.pause;
-  document.getElementsByClassName("process-remove")[0].onclick = Process.remove;
-  document.getElementsByClassName("title-icon")[0].onclick = help;
-  var input = document.getElementsByClassName("input-bar")[0].children[0];
+  document.getElementsByClassName("process-add")[0].onclick = e => { input.value = "#add "; }
+  document.getElementsByClassName("process-pause")[0].onclick = e => { input.value = "#toggle"; };
+  document.getElementsByClassName("process-remove")[0].onclick = e => { input.value = "#remove"; };
+  document.getElementsByClassName("title-icon")[0].onclick = menu;
   input.onkeydown = e => {
     if(e.keyCode != 13) return; // '13' = Enter-Key
     if(input.value.length <= 0) return;
-    Process.input(input.value);
-    input.value = String();
+    input.value = Process.input(input.value);
   }
   Process.fetch();
   setInterval(Process.logger, 256);

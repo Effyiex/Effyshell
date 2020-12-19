@@ -83,6 +83,7 @@ class BackEnd:
         elif packet.label == "CLEAR_LOG":
             process = registry.get(int(packet.args[0]))
             if process != None: process.log = str()
+        elif packet.label == "QUIT": _exit(0)
         return JsPacket("404 Standard-Feedback.")
 
     def launch(self):

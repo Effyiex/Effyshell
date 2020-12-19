@@ -12,6 +12,13 @@
     <div class="console-log">
       <textarea readonly> </textarea>
     </div>
+    <div class="menu">
+      <h1> Effyshell Menu </h1>
+      <ul>
+        <li onclick="exit()"> <a title="Close the Server System"> - Quit Effyshell </a> </li>
+        <li onclick="clearlog()"> <a title="Clear the current Log."> - Clear Log </a> </li>
+      </ul>
+    </div>
     <div class="title-bar">
       <div class="title-icon">
         <img src="assets/icon.png"/>
@@ -48,5 +55,6 @@
     <div class="input-bar">
       <input placeholder="Execute Command here."> </input>
     </div>
+    <div class="quitted" style="display: none;"> <p> You quitted Effyshell. </p> </div>
   </body>
 </html>
