@@ -89,7 +89,9 @@ class Process {
       else return "#add <path>";
     } else if(command.toLowerCase() == "#toggle") Process.pause();
     else if(command.toLowerCase() == "#remove") Process.remove();
-    else CLIENT.send(new PyPacket("STREAM_PROCESS", [Process.index, command]));
+    else if(command.toLowerCase() == "#reload") {
+      for(var step = 0; step < 2; step++) Process.pause();
+    } else CLIENT.send(new PyPacket("STREAM_PROCESS", [Process.index, command]));
     return String();
   }
 
