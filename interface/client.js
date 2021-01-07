@@ -138,14 +138,6 @@ function menu() {
   }
 }
 
-function exit() {
-  input.value = "#quit";
-}
-
-function clearlog() {
-  input.value = "#clear";
-}
-
 var input;
 
 var quitted = false;
