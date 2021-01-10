@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/EffyshellInstaller.iml" filepath="$PROJECT_DIR$/EffyshellInstaller.iml" />
+      <module fileurl="file://$PROJECT_DIR$/EffyshellHelper.iml" filepath="$PROJECT_DIR$/EffyshellHelper.iml" />
     </modules>
   </component>
 </project>

@@ -1,3 +1,5 @@
 PyJsPs.*
 __pycache__
 *.db
+desktop/out
+*.jar

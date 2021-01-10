@@ -1,4 +1,5 @@
 
+from config import *
 from pyjsps import *
 from threading import Thread
 from socket import *
@@ -7,9 +8,6 @@ from os import _exit
 from subprocess import Popen, PIPE
 
 def cwd(): return filedir.dirname(filedir.abspath(__file__))
-
-BACKEND_PORT = 8923
-FRONTEND_PORT = 8924
 
 class Process:
 
