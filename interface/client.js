@@ -68,12 +68,24 @@ class Process {
   static logger = function() {
     var inst = PROCESSES[Process.index];
     if(!inst || !Process.area || quitted) return;
-    CLIENT.send(new PyPacket("FETCH_LOG", [Process.index]), function(packet) {
-      var log = packet.label.replaceAll("\\LINE_BREAK\\", '\n');
-      if(!inst.active) log = "Process closed.";
-      log = ADVERT + log;
-      if(Process.area.innerHTML != log)
-      Process.area.innerHTML = log;
+    CLIENT.send(new PyPacket("FETCH_LOG_STATUS", [Process.index]), function(packet) {
+      if(packet.label.toLowerCase() == "true")
+      CLIENT.send(new PyPacket("FETCH_LOG_TEXT", [Process.index]), function(packet) {
+        var log = packet.label.replaceAll("\\LINE_BREAK\\", '\n');
+        if(!inst.active) log = "Process closed.";
+        log = ADVERT + log;
+        var selection = [
+          Process.area.selectionStart,
+          Process.area.selectionEnd
+        ];
+        Process.area.innerHTML = log;
+        for(var i = 0; i < 3; i++) {
+          if(2 <= i) {
+            Process.area.selectionStart = selection[0];
+            Process.area.selectionEnd = selection[1];
+          } else if(log.length <= selection[i]) break;
+        }
+      });
     });
   }
 
@@ -90,7 +102,10 @@ class Process {
     } else if(command.toLowerCase() == "#toggle") Process.pause();
     else if(command.toLowerCase() == "#remove") Process.remove();
     else if(command.toLowerCase() == "#reload") {
-      for(var step = 0; step < 2; step++) Process.pause();
+      var inst = PROCESSES[Process.index];
+      var steps = 2;
+      if(inst && !inst.active) steps = 1;
+      for(var step = 0; step < steps; step++) Process.pause();
     } else CLIENT.send(new PyPacket("STREAM_PROCESS", [Process.index, command]));
     return String();
   }
@@ -150,6 +165,9 @@ window.onload = function() {
   document.getElementsByClassName("process-add")[0].onclick = e => { input.value = "#add "; }
   document.getElementsByClassName("process-pause")[0].onclick = e => { input.value = "#toggle"; };
   document.getElementsByClassName("process-remove")[0].onclick = e => { input.value = "#remove"; };
+  document.getElementsByClassName("scroll-to-end")[0].onclick = e => {
+    Process.area.scrollTop = Process.area.scrollHeight - Process.area.clientHeight;
+  };
   document.getElementsByClassName("title-icon")[0].onclick = menu;
   input.onkeydown = e => {
     if(e.keyCode != 13) return; // '13' = Enter-Key

@@ -19,14 +19,19 @@ class Process:
         self.log = str()
         self.inner = None
         self.thread = None
+        self.log_changed = True
         if alive: self.launch()
 
-    def add_to_log(self, line): self.log += f"\n{line}".replace('\n', "\\LINE_BREAK\\")
+    def add_to_log(self, line):
+         self.log += f"\n{line}".replace('\n', "\\LINE_BREAK\\")
+         self.log_changed = True
+
     def parse(self): return f"{self.launcher}*~{str(self.alive)}"
 
     def launch(self):
         self.thread = Thread(target=self.layer)
         self.thread.start()
+        self.log_changed = True
 
     def layer(self):
         mapped = self.launcher.replace('\\', '/').split('/')
@@ -46,6 +51,7 @@ class Process:
 
     def toggle(self):
         self.alive = not self.alive
+        self.log_changed = True
         if self.alive: self.launch()
         else:
             self.inner.kill()
@@ -66,7 +72,9 @@ class BackEnd:
             if process != None: process.toggle()
         elif packet.label == "FETCH_PROCESSES":
             args = []
-            for process in registry.req: args.append(process.parse())
+            for process in registry.req:
+                process.log_changed = True
+                args.append(process.parse())
             return JsPacket(str(registry.count()), args)
         elif packet.label == "ADD_PROCESS": registry.append(Process(packet.args[0]))
         elif packet.label == "REMOVE_PROCESS":
@@ -74,15 +82,22 @@ class BackEnd:
             process = registry.get(index)
             if process.alive: process.toggle()
             registry.remove(index)
-        elif packet.label == "FETCH_LOG":
+        elif packet.label == "FETCH_LOG_TEXT":
             process = registry.get(int(packet.args[0]))
-            if process != None: return JsPacket(process.log)
+            if process != None:
+                process.log_changed = False
+                return JsPacket(process.log)
         elif packet.label == "STREAM_PROCESS":
             process = registry.get(int(packet.args[0]))
             if process != None: process.send(packet.args[1])
+        elif packet.label == "FETCH_LOG_STATUS":
+            process = registry.get(int(packet.args[0]))
+            if process != None: return JsPacket(str(process.log_changed))
         elif packet.label == "CLEAR_LOG":
             process = registry.get(int(packet.args[0]))
-            if process != None: process.log = str()
+            if process != None:
+                process.log = str()
+                process.log_changed = True
         elif packet.label == "QUIT": _exit(0)
         return JsPacket("404 Standard-Feedback.")
 

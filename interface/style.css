@@ -143,6 +143,7 @@
   color: #FFFFFF;
   font-family: Nunito;
   overflow: auto;
+  cursor: text;
 }
 
 .welcome-msg {
