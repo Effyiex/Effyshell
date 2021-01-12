@@ -2,8 +2,6 @@ package cf.effyiex;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.xml.bind.DatatypeConverter;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -12,8 +10,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.security.CodeSource;
+import java.util.Base64;
 
 public class EffyshellHelper {
 
@@ -123,8 +120,8 @@ public class EffyshellHelper {
         FRAME.setSize(SIZE, SIZE);
         FRAME.setResizable(false);
         FRAME.setLocation((screen.width - FRAME.getWidth()) / 2, (screen.height - FRAME.getHeight()) / 2);
-        FRAME.setIconImage(EffyshellHelper.convertIcon());
         FRAME.setUndecorated(true);
+        FRAME.setIconImage(EffyshellHelper.convertIcon());
         PANEL.setBackground(Color.black);
         PANEL.setLayout(null);
         FRAME.add(PANEL);
@@ -166,7 +163,7 @@ public class EffyshellHelper {
     }
 
     private static BufferedImage convertIcon() {
-        byte[] buffer = DatatypeConverter.parseBase64Binary(ICON_64);
+        byte[] buffer = Base64.getDecoder().decode(ICON_64);
         BufferedImage icon = null;
         try(InputStream stream = new ByteArrayInputStream(buffer)) {
             icon = ImageIO.read(stream);

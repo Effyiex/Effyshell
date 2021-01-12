@@ -33,7 +33,7 @@ class Process {
       }
       var suffix = '!';
       if(PROCESSES.length > 0)
-        suffix = " back, active: " + (Process.active() / PROCESSES.length * 100) + '%';
+        suffix = " back, active: " + Math.round(Process.active() / PROCESSES.length * 100) + '%';
       document.getElementsByClassName("welcome-msg")[0].innerHTML = "Welcome" + suffix;
     });
   }
@@ -79,6 +79,7 @@ class Process {
           Process.area.selectionEnd
         ];
         Process.area.innerHTML = log;
+        if(selection[0] != selection[1])
         for(var i = 0; i < 3; i++) {
           if(2 <= i) {
             Process.area.selectionStart = selection[0];
