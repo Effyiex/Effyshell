@@ -9,3 +9,4 @@ Old program had compability problems so I renewed it.
 - Web Interface
 - IO-Handling via WebSockets
 - Local Database
+- Simple and neat Desktop Helper
