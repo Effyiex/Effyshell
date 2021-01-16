@@ -6,7 +6,7 @@ Old program had compability problems so I renewed it.
 
 # Features
 
-- Web Interface
+- Simple Web Interface
 - IO-Handling via WebSockets
 - Local Database
 - Simple and neat Desktop Helper
