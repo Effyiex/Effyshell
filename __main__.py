@@ -4,8 +4,11 @@ from pyjsps import *
 from threading import Thread
 from socket import *
 from os import path as filedir
-from os import _exit
+from os import _exit, kill
 from subprocess import Popen, PIPE
+from sys import platform
+
+import signal
 
 def cwd(): return filedir.dirname(filedir.abspath(__file__))
 
@@ -36,25 +39,34 @@ class Process:
         dir = str()
         for i in range(len(mapped) - 1): dir += mapped[i] + '/'
         self.inner = Popen([self.launcher], shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=dir)
-        while self.inner != None:
+        while self.alive:
             for line in self.inner.stdout:
-                if not line: break
-                data = line.decode("utf-8").rstrip('\n')
-                if len(data) > 0: self.add_to_log(data)
+                if not line or not self.alive: break
+                try:
+                    data = line.decode("utf-8").rstrip('\n')
+                    if len(data) > 0: self.add_to_log(data)
+                except: continue
 
     def send(self, command):
         self.inner.stdin.write((command + '\n').encode())
         self.inner.stdin.flush()
-        self.add_to_log(f" > Effyshell-Input: {command}")
+        self.add_to_log(f" -> Effyshell-Input: {command}")
 
     def toggle(self):
         self.alive = not self.alive
         self.log_changed = True
         if self.alive: self.launch()
         else:
-            self.inner.kill()
             self.log = str()
+            self.stop()
         registry.refresh()
+
+    def stop(self):
+        if platform != "win32":
+            kill(self.inner, signal.SIGKILL)
+        else:
+            Popen("taskkill /F /T /PID %i"%self.inner.pid, shell=True)
+        print("Killed Process...")
 
 class BackEnd:
 
