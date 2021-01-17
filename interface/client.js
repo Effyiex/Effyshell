@@ -10,6 +10,7 @@ const ADVERT = "Effyiex's Effyshell Indev-Build,\nget help by pressing the logo 
 class Process {
 
   static index = 0;
+  static last = -1;
 
   static area;
   static tabs;
@@ -69,24 +70,31 @@ class Process {
     var inst = PROCESSES[Process.index];
     if(!inst || !Process.area || quitted) return;
     CLIENT.send(new PyPacket("FETCH_LOG_STATUS", [Process.index]), function(packet) {
-      if(packet.label.toLowerCase() == "true")
-      CLIENT.send(new PyPacket("FETCH_LOG_TEXT", [Process.index]), function(packet) {
-        var log = packet.label.replaceAll("\\LINE_BREAK\\", '\n');
-        if(!inst.active) log = "Process closed.";
-        log = ADVERT + log;
-        var selection = [
-          Process.area.selectionStart,
-          Process.area.selectionEnd
-        ];
-        Process.area.innerHTML = log;
-        if(selection[0] != selection[1])
-        for(var i = 0; i < 3; i++) {
-          if(2 <= i) {
-            Process.area.selectionStart = selection[0];
-            Process.area.selectionEnd = selection[1];
-          } else if(log.length <= selection[i]) break;
-        }
-      });
+      if(packet.label.toLowerCase() == "true" || Process.last != Process.index)
+      Process.update();
+      Process.last = Process.index;
+    });
+  }
+
+  static update = function() {
+    var inst = PROCESSES[Process.index];
+    if(!inst || !Process.area || quitted) return;
+    CLIENT.send(new PyPacket("FETCH_LOG_TEXT", [Process.index]), function(packet) {
+      var log = packet.label.replaceAll("\\LINE_BREAK\\", '\n');
+      if(!inst.active) log = "Process closed.";
+      log = ADVERT + log;
+      var selection = [
+        Process.area.selectionStart,
+        Process.area.selectionEnd
+      ];
+      Process.area.innerHTML = log;
+      if(selection[0] != selection[1])
+      for(var i = 0; i < 3; i++) {
+        if(2 <= i) {
+          Process.area.selectionStart = selection[0];
+          Process.area.selectionEnd = selection[1];
+        } else if(log.length <= selection[i]) break;
+      }
     });
   }
 
