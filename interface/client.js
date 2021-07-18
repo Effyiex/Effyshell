@@ -172,8 +172,8 @@ window.onload = function() {
   Process.area = document.getElementsByClassName("console-log")[0].children[0];
   Process.tabs = document.getElementsByClassName("logging-tabs")[0].children[0];
   document.getElementsByClassName("process-add")[0].onclick = e => { input.value = "#add "; }
-  document.getElementsByClassName("process-pause")[0].onclick = e => { input.value = "#toggle"; };
-  document.getElementsByClassName("process-remove")[0].onclick = e => { input.value = "#remove"; };
+  document.getElementsByClassName("process-pause")[0].onclick = e => { Process.input("#toggle"); };
+  document.getElementsByClassName("process-remove")[0].onclick = e => { Process.input("#remove"); };
   document.getElementsByClassName("scroll-to-end")[0].onclick = e => {
     Process.area.scrollTop = Process.area.scrollHeight - Process.area.clientHeight;
   };
