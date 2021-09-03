@@ -1,2 +1,5 @@
+
+# Default Values
 BACKEND_PORT = 8923
 FRONTEND_PORT = 8924
+PASSWORD = "admin"

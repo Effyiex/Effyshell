@@ -1,204 +1,216 @@
 
-from config import *
-from pyjsps import *
 from threading import Thread
-from socket import *
-from os import path as filedir
-from os import _exit, kill
 from subprocess import Popen, PIPE
 from sys import platform
 
+from pyjsps import *
+from config import *
+from socket import *
+
 import signal
+import os
 
-def cwd(): return filedir.dirname(filedir.abspath(__file__))
+DIR = os.getcwd().replace('\\', '/')
 
-class Process:
+class ServerProcess:
 
-    def __init__(self, launcher, alive=False):
-        self.launcher = launcher
-        self.alive = alive
+    HEADER = "--CACHED_PROCESS--"
+
+    def __init__(self, label, script, state=False):
+        self.script = script.replace('\n', '&')
+        self.state = False
+        self.label = label
+        self.sub = None
         self.log = str()
-        self.inner = None
-        self.thread = None
-        self.log_changed = True
-        if alive: self.launch()
+        Thread.__init__(self)
+        if state: self.toggle()
 
-    def add_to_log(self, line):
-         self.log += f"\n{line}".replace('\n', "\\LINE_BREAK\\")
-         self.log_changed = True
+    def input(self, command):
+        self.sub.stdin.write((command + '\n').encode())
+        self.sub.stdin.flush()
+        self.log += f" <Effyshell-Input> {command}\n"
 
-    def parse(self): return f"{self.launcher}*~{str(self.alive)}"
-
-    def launch(self):
-        self.thread = Thread(target=self.layer)
-        self.thread.start()
-        self.log_changed = True
-
-    def layer(self):
-        mapped = self.launcher.replace('\\', '/').split('/')
-        dir = str()
-        for i in range(len(mapped) - 1): dir += mapped[i] + '/'
-        self.inner = Popen([self.launcher], shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=dir)
-        while self.alive:
-            for line in self.inner.stdout:
-                if not line or not self.alive: break
-                try:
-                    data = line.decode("utf-8").rstrip('\n')
-                    if len(data) > 0: self.add_to_log(data)
-                except: continue
-
-    def send(self, command):
-        self.inner.stdin.write((command + '\n').encode())
-        self.inner.stdin.flush()
-        self.add_to_log(f" -> Effyshell-Input: {command}")
+    def output(self): return self.log.replace('\n', "<br>")
 
     def toggle(self):
-        self.alive = not self.alive
-        self.log_changed = True
-        if self.alive: self.launch()
+        self.state = not self.state
+        if self.state:
+            self.log = " <Effyshell-Output> Launching Server-Process...\n"
+            Thread(target=self.run).start()
         else:
-            self.log = str()
-            self.stop()
-        registry.refresh()
+            self.log += " <Effyshell-Output> Stopping Server-Process...\n"
+            if platform != "win32": kill(self.sub, signal.SIGKILL)
+            else: Popen("taskkill /F /T /PID %i"%self.sub.pid, shell=True)
 
-    def stop(self):
-        if platform != "win32":
-            kill(self.inner, signal.SIGKILL)
-        else:
-            Popen("taskkill /F /T /PID %i"%self.inner.pid, shell=True)
-        print("Killed Process...")
-
-class BackEnd:
-
-    def __init__(self):
-        self.server = JsSocket(BACKEND_PORT, self.receiver)
-
-    def receiver(self, packet):
-        packet.label = packet.label.upper()
-        if not packet.label.startswith("FETCH"): # Stopping Overflow
-            print("BackEnd-Request : " + packet.label)
-        if packet.label == "TOGGLE_PROCESS":
-            process = registry.get(int(packet.args[0]))
-            if process != None: process.toggle()
-        elif packet.label == "FETCH_PROCESSES":
-            args = []
-            for process in registry.req:
-                process.log_changed = True
-                args.append(process.parse())
-            return JsPacket(str(registry.count()), args)
-        elif packet.label == "ADD_PROCESS": registry.append(Process(packet.args[0]))
-        elif packet.label == "REMOVE_PROCESS":
-            index = int(packet.args[0])
-            process = registry.get(index)
-            if process.alive: process.toggle()
-            registry.remove(index)
-        elif packet.label == "FETCH_LOG_TEXT":
-            process = registry.get(int(packet.args[0]))
-            if process != None:
-                process.log_changed = False
-                return JsPacket(process.log)
-        elif packet.label == "STREAM_PROCESS":
-            process = registry.get(int(packet.args[0]))
-            if process != None: process.send(packet.args[1])
-        elif packet.label == "FETCH_LOG_STATUS":
-            process = registry.get(int(packet.args[0]))
-            if process != None: return JsPacket(str(process.log_changed))
-        elif packet.label == "CLEAR_LOG":
-            process = registry.get(int(packet.args[0]))
-            if process != None:
-                process.log = str()
-                process.log_changed = True
-        elif packet.label == "QUIT": _exit(0)
-        return JsPacket("404 Standard-Feedback.")
-
-    def launch(self):
-        print("BackEnd  waiting.")
-        self.server.listen_forever()
-
-class FrontEnd:
-
-    def __init__(self):
-        self.server = socket()
-        try: self.server.bind(("127.0.0.1", FRONTEND_PORT))
-        except : print("Couldn't bind the FrontEnd-Socket.")
-        self.thread = Thread(target=self.shaker)
-        with open(f"{cwd()}/interface/404.html", "rb") as file: self.empty = file.read()
-
-    def shaker(self):
-        print("FrontEnd waiting.")
-        while True:
-            client, address = self.server.accept()
-            req = client.recv(1024).decode("utf-8").split(' ')
-            bytes = self.empty
-            if len(req) > 2 and req[0] == "GET":
-                request = req[1]
-                while len(request) > 1 and request[1] == '.':
-                    request = '/' + request[2:]
-                if request == '/': request = "/index.html"
-                print(f"FrontEnd-Request: {request}")
-                dir = cwd().replace('\\', '/') + "/interface"
+    def run(self):
+        self.sub = Popen(self.script, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+        self.sub.wait()
+        while self.state:
+            for line in self.sub.stdout:
+                if not line or not self.state: break
                 try:
-                    with open(f"{dir}{request}", "rb") as file: bytes = file.read()
-                except: print(f"Couldn't access file: {request}")
-            client.send(str.encode("HTTP/1.0 200 OK\n\n") + bytes)
-            client.close()
-
-    def launch(self):
-        self.server.listen(5)
-        self.thread.start()
+                    data = line.decode("utf-8").rstrip('\n')
+                    if len(data) > 0: self.log += data + '\n'
+                except: continue
 
 class Database:
 
-    def __init__(self):
-        self.path = cwd().replace('\\', '/') + "/registry.db"
-        self.req = []
+    FILE = f"{DIR}/processes.db"
+    CACHE = []
 
-    def fetch(self):
-        self.req.clear()
-        try:
-            with open(self.path, 'r') as file:
-                content = file.read()
-                for line in content.split('\n'):
-                    map = line.split("*~", 2)
-                    if len(map) > 1:
-                        active = map[1] == "True"
-                        self.req.append(Process(map[0], active))
-            print("Database fetched.")
-        except:
-            with open(self.path, 'w') as file: file.write('\n')
-            print("Database created.")
+    @staticmethod
+    def load():
+        if not os.path.exists(Database.FILE):
+            open(Database.FILE, 'w').close()
+            return
+        local = open(Database.FILE, 'r')
+        formatted = local.read().split('\n')
+        local.close()
+        latest_index = -1
+        has_process_data = False
+        for line in formatted:
+            if 0 <= latest_index: latest_index += 1
+            if ServerProcess.HEADER in line:
+                latest_index = 0
+                if has_process_data:
+                    latest_process = ServerProcess(latest_label, latest_script, latest_state)
+                    Database.CACHE.append(latest_process)
+                has_process_data = False
+                latest_label = str()
+                latest_state = False
+                latest_script = str()
+            elif latest_index == 1: latest_label = line
+            elif latest_index == 2: latest_state = (line == "True")
+            elif latest_index == 3:
+                latest_script = line
+                has_process_data = True
+        if has_process_data:
+            latest_process = ServerProcess(latest_label, latest_script, latest_state)
+            Database.CACHE.append(latest_process)
+        print("Database loaded: " + str(len(Database.CACHE)) + " processes")
 
-    def count(self): return len(self.req)
+    @staticmethod
+    def save():
+        formatted = str()
+        for process in Database.CACHE:
+            formatted += ServerProcess.HEADER + '\n'
+            formatted += process.label + '\n'
+            formatted += str(process.state) + '\n'
+            formatted += process.script + '\n'
+        local = open(Database.FILE, 'w')
+        local.write(formatted)
+        local.close()
 
-    def get(self, index):
-        if self.count() > index: return self.req[index]
-        else: return None
+    @staticmethod
+    def dispose(process):
+        Database.CACHE.remove(process)
+        Database.save()
 
-    def append(self, process):
-        self.req.append(process)
-        with open(self.path, 'a') as file: file.write('\n' + process.parse())
+    @staticmethod
+    def register(process):
+        Database.CACHE.append(process)
+        Database.save()
 
-    def refresh(self):
-        with open(self.path, 'w') as file:
-            code = str()
-            for process in self.req:
-                code += '\n' + process.parse()
-            file.write(code)
+    @staticmethod
+    def get_by_label(process_label):
+        for process in Database.CACHE:
+            if process.label == process_label:
+                return process
+        return None
 
-    def remove(self, index):
-        if self.count() <= index: return
-        self.req.pop(index)
-        self.refresh()
+class Websocket:
 
-http = FrontEnd()
-back = BackEnd()
-registry = Database()
+    SOCKET = None
 
-def main():
-    registry.fetch()
-    http.launch()
-    back.launch()
+    @staticmethod
+    def launch():
+        Websocket.SOCKET = JsSocket(BACKEND_PORT, Websocket.receive)
+        Websocket.SOCKET.listen_forever()
+
+    @staticmethod
+    def receive(packet):
+        packet.label = packet.label.upper()
+        if not "FETCH" in packet.label:
+            print("Websocket request: " + packet.label)
+        if packet.label == "FETCH_PROCESS_OUTPUT":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: return JsPacket(process.output())
+        elif packet.label == "FETCH_CURRENT_PROCESSES":
+            p_args = []
+            for process in Database.CACHE:
+                p_args.append(process.label)
+                p_args.append(str(process.state))
+                p_args.append(process.script)
+            return JsPacket("CACHED_PROCESSES", p_args)
+        elif packet.label == "FETCH_PROCESS_STATE":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: return JsPacket(str(process.state))
+        elif packet.label == "TOGGLE_PROCESS_STATE":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: process.toggle()
+            Database.save()
+        elif packet.label == "PROCESS_SEND_INPUT":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: process.input(packet.args[1])
+        elif packet.label == "PROCESS_CLEAR_LOG":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: process.log = str()
+        elif packet.label == "DB_PROCESS_REMOVE":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: Database.dispose(process)
+        elif packet.label == "DB_PROCESS_ADD":
+            if 2 == len(packet.args): Database.register(ServerProcess(packet.args[0], packet.args[1]))
+            else: return JsPacket("INVALID: This packet needs 2 arguments.");
+        elif packet.label == "FETCH_PROCESS_SCRIPT":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: return JsPacket(process.script)
+        elif packet.label == "PROCESS_SET_SCRIPT":
+            process = Database.get_by_label(packet.args[0])
+            if process is not None: process.script = packet.args[1]
+        elif packet.label == "EFFYSHELL_QUIT": os._exit(0)
+        return JsPacket("404 Standard-Feedback.")
+
+class Webserver:
+
+    SOCKET = None
+
+    @staticmethod
+    def launch():
+        Webserver.SOCKET = socket()
+        try: Webserver.SOCKET.bind(("127.0.0.1", FRONTEND_PORT))
+        except: print("Couldn't bind the Webserver.")
+        Webserver.SOCKET.listen(5)
+        Thread(target=Webserver.receive).start()
+
+    @staticmethod
+    def receive():
+        while True:
+            client, address = Webserver.SOCKET.accept()
+            request = client.recv(1024).decode("utf-8").split(' ')
+            bytes = bytearray()
+            if len(request) > 2 and request[0] == "GET":
+                get_request = request[1][1:]
+                if len(get_request) <= 0:
+                    get_request = "security.html"
+                    bytes = interface("security.html")
+                elif ".html" in get_request or not '.' in get_request:
+                    if get_request == PASSWORD: bytes = interface("index.html")
+                    else: bytes = interface("invalid.html")
+                else: bytes = interface(get_request)
+                print(f"Webserver request: {get_request}")
+            client.send(b"HTTP/1.0 200 OK\n\n" + bytes)
+            client.close()
+
+def interface(file):
+    try:
+        requested_file = open(f"{DIR}/interface/{file}", "rb")
+        bytes = requested_file.read()
+        requested_file.close()
+    except:
+        return bytearray()
+    return bytes
 
 if __name__ == "__main__":
-    try: main()
-    except KeyboardInterrupt: _exit(0)
+    Database.load()
+    Webserver.launch()
+    Websocket.launch()
