@@ -21,37 +21,38 @@ class ServerProcess:
         self.state = False
         self.label = label
         self.sub = None
-        self.log = str()
+        self.log = bytearray()
         Thread.__init__(self)
         if state: self.toggle()
 
     def input(self, command):
         self.sub.stdin.write((command + '\n').encode())
         self.sub.stdin.flush()
-        self.log += f" <Effyshell-Input> {command}\n"
+        self.log += (f" <Effyshell-Input> {command}\n").encode("utf-8")
 
-    def output(self): return self.log.replace('\n', "<br>")
+    def output(self):
+        return self.log.decode("utf-8").replace('\n', "<br>")
 
-    def toggle(self):
+    def toggle(self, eof=False):
         self.state = not self.state
         if self.state:
-            self.log = " <Effyshell-Output> Launching Server-Process...\n"
+            self.log = b" <Effyshell-Output> Launching Server-Process...\n"
             Thread(target=self.run).start()
         else:
-            self.log += " <Effyshell-Output> Stopping Server-Process...\n"
-            if platform != "win32": kill(self.sub, signal.SIGKILL)
-            else: Popen("taskkill /F /T /PID %i"%self.sub.pid, shell=True)
+            self.log += b" <Effyshell-Output> Stopping Server-Process...\n"
+            if not eof:
+                if platform != "win32": kill(self.sub, signal.SIGKILL)
+                else: Popen("taskkill /F /T /PID %i"%self.sub.pid, shell=True)
 
     def run(self):
-        self.sub = Popen(self.script, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-        self.sub.wait()
+        if platform == "win32": task = f"cmd /c \"{self.script}\""
+        else: task = self.script
+        self.sub = Popen(task, shell=True, stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=DIR, bufsize=0)
         while self.state:
-            for line in self.sub.stdout:
-                if not line or not self.state: break
-                try:
-                    data = line.decode("utf-8").rstrip('\n')
-                    if len(data) > 0: self.log += data + '\n'
-                except: continue
+            self.sub.stdout.flush()
+            byte = self.sub.stdout.read(1)
+            if not byte: self.toggle(eof=True)
+            else: self.log += byte
 
 class Database:
 
@@ -142,9 +143,11 @@ class Websocket:
                 p_args.append(str(process.state))
                 p_args.append(process.script)
             return JsPacket("CACHED_PROCESSES", p_args)
-        elif packet.label == "FETCH_PROCESS_STATE":
-            process = Database.get_by_label(packet.args[0])
-            if process is not None: return JsPacket(str(process.state))
+        elif packet.label == "FETCH_PROCESS_STATES":
+            p_args = []
+            for process in Database.CACHE:
+                p_args.append(str(process.state))
+            return JsPacket("FETCHED_PROCESS_STATES", p_args)
         elif packet.label == "TOGGLE_PROCESS_STATE":
             process = Database.get_by_label(packet.args[0])
             if process is not None: process.toggle()

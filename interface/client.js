@@ -35,6 +35,17 @@ class ServerProcess {
     updateToggleButton();
   }
 
+  static checkStates = function() {
+    CLIENT.send(new PyPacket("FETCH_PROCESS_STATES"), function(packet) {
+      packet.args.forEach((state, index) => {
+        state = (state == "True");
+        if(ServerProcess.cache[index] != undefined)
+        if(ServerProcess.cache[index].state != state)
+        ServerProcess.cache[index].localToggle();
+      });
+    });
+  }
+
   static setIndex = function(to) {
     if(ServerProcess.cache[ServerProcess.index] != undefined)
     ServerProcess.cache[ServerProcess.index].listItem.classList.remove("current_process");
@@ -60,7 +71,7 @@ class ServerProcess {
   }
 
   static add = function(label, script) {
-    CLIENT.send(new PyPacket("DB_PROCESS_ADD", [label, script]));
+    CLIENT.send(new PyPacket("DB_PROCESS_ADD", [label, script.replaceAll('\n', '&')]));
     ServerProcess.fetch();
   }
 
@@ -132,4 +143,5 @@ window.addEventListener("load", function() {
       logElement.value = currentLog;
     });
   }, 512);
+  setInterval(ServerProcess.checkStates, 256);
 });
