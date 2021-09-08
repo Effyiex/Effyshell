@@ -11,6 +11,8 @@ import signal
 import os
 
 DIR = os.getcwd().replace('\\', '/')
+while DIR.endswith('/'): DIR = DIR[:len(DIR) - 1]
+if not DIR.endswith("Effyshell"): DIR += "/Effyshell"
 
 class ServerProcess:
 
