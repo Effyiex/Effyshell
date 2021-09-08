@@ -45,6 +45,7 @@ class ServerProcess:
             if not eof:
                 if platform != "win32": kill(self.sub, signal.SIGKILL)
                 else: Popen("taskkill /F /T /PID %i"%self.sub.pid, shell=True)
+        Database.save()
 
     def run(self):
         if platform == "win32": task = f"cmd /c \"{self.script}\""
@@ -153,7 +154,6 @@ class Websocket:
         elif packet.label == "TOGGLE_PROCESS_STATE":
             process = Database.get_by_label(packet.args[0])
             if process is not None: process.toggle()
-            Database.save()
         elif packet.label == "PROCESS_SEND_INPUT":
             process = Database.get_by_label(packet.args[0])
             if process is not None: process.input(packet.args[1])
