@@ -14,5 +14,4 @@ Old program had compability problems so I renewed it.
 
 # Todo-List
 
-- Show in interface when a subprocess has ended using "poll"
 - A simple installer
