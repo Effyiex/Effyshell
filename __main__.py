@@ -3,12 +3,14 @@ from threading import Thread
 from subprocess import Popen, PIPE
 from sys import platform
 
-from pyjsps import *
 from config import *
 from socket import *
 
 import signal
 import os
+
+from require import require_url
+pyjsps = require_url("https://effyiex.github.io/PyJsPs/pyjsps.py")
 
 DIR = os.getcwd().replace('\\', '/')
 while DIR.endswith('/'): DIR = DIR[:len(DIR) - 1]
@@ -128,7 +130,7 @@ class Websocket:
 
     @staticmethod
     def launch():
-        Websocket.SOCKET = JsSocket(BACKEND_PORT, Websocket.receive)
+        Websocket.SOCKET = pyjsps.JsSocket(BACKEND_PORT, Websocket.receive)
         Websocket.SOCKET.listen_forever()
 
     @staticmethod
@@ -138,19 +140,19 @@ class Websocket:
             print("Websocket request: " + packet.label)
         if packet.label == "FETCH_PROCESS_OUTPUT":
             process = Database.get_by_label(packet.args[0])
-            if process is not None: return JsPacket(process.output())
+            if process is not None: return pyjsps.JsPacket(process.output())
         elif packet.label == "FETCH_CURRENT_PROCESSES":
             p_args = []
             for process in Database.CACHE:
                 p_args.append(process.label)
                 p_args.append(str(process.state))
                 p_args.append(process.script)
-            return JsPacket("CACHED_PROCESSES", p_args)
+            return pyjsps.JsPacket("CACHED_PROCESSES", p_args)
         elif packet.label == "FETCH_PROCESS_STATES":
             p_args = []
             for process in Database.CACHE:
                 p_args.append(str(process.state))
-            return JsPacket("FETCHED_PROCESS_STATES", p_args)
+            return pyjsps.JsPacket("FETCHED_PROCESS_STATES", p_args)
         elif packet.label == "TOGGLE_PROCESS_STATE":
             process = Database.get_by_label(packet.args[0])
             if process is not None: process.toggle()
@@ -165,15 +167,15 @@ class Websocket:
             if process is not None: Database.dispose(process)
         elif packet.label == "DB_PROCESS_ADD":
             if 2 == len(packet.args): Database.register(ServerProcess(packet.args[0], packet.args[1]))
-            else: return JsPacket("INVALID: This packet needs 2 arguments.");
+            else: return pyjsps.JsPacket("INVALID: This packet needs 2 arguments.");
         elif packet.label == "FETCH_PROCESS_SCRIPT":
             process = Database.get_by_label(packet.args[0])
-            if process is not None: return JsPacket(process.script)
+            if process is not None: return pyjsps.JsPacket(process.script)
         elif packet.label == "PROCESS_SET_SCRIPT":
             process = Database.get_by_label(packet.args[0])
             if process is not None: process.script = packet.args[1]
         elif packet.label == "EFFYSHELL_QUIT": os._exit(0)
-        return JsPacket("404 Standard-Feedback.")
+        return pyjsps.JsPacket("404 Standard-Feedback.")
 
 class Webserver:
 

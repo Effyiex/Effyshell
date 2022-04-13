@@ -1,5 +1,3 @@
-PyJsPs.*
+__libraries__
 __pycache__
 *.db
-desktop/out
-*.jar
